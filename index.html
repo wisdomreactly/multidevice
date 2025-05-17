@@ -2,23 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>System Information</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="icon" href="favicon.ico" type="image/x-icon"/>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
 </head>
 <body>
   <div class="container">
-    <br>
+    <br />
     <h1>MULTI DEVICE</h1>
-    <br>
-    <p>This code creates a responsive web page to display system information interactively. Using a three-column grid layout, it shows data such as platform, OS, CPU, memory, and more, enhanced with a futuristic glitch effect for a modern look.</p>
-    <br>
+    <br />
+    <p>
+      This code creates a responsive web page to display system information interactively.
+      Using a three-column grid layout, it shows data such as platform, OS, CPU, memory,
+      and more, enhanced with a futuristic glitch effect for a modern look.
+    </p>
+    <br />
     <div class="stats-information">
       <h2>System Information Overview</h2>
-      <br>
+      <br />
       <div class="stats">
         <div class="stat-item">
           <i class="icon fas fa-user-circle"></i>
@@ -67,66 +71,186 @@
         </div>
       </div>
 
-      <br>
-      <br>
+      <br />
       <h2 style="color: #00ff00;">Device Location Map</h2>
       <div id="map" style="height: 400px; border-radius: 10px; margin-top: 20px;"></div>
-      <br>
-      <footer>
-        &copy; 2024 multidevice - wisdomreactly
-      </footer>
+      <br />
+      <footer>&copy; 2024 multidevice - wisdomreactly</footer>
     </div>
   </div>
 
-  <script src="script.js"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://kit.fontawesome.com/a076d05399.js"></script>
   <script>
-    // Inisialisasi peta awal
-    const map = L.map('map').setView([0, 120], 3.5);
+    document.addEventListener('DOMContentLoaded', () => {
+      // System Info
+      document.getElementById('platform').textContent = navigator.platform;
 
-    // Tambahkan tile layer dark
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; CartoDB',
-      subdomains: 'abcd',
-      maxZoom: 19
-    }).addTo(map);
+      const os = navigator.userAgent;
+      document.getElementById('os').textContent = getOSInfo(os);
 
-    // Tambahkan titik perangkat lain (statis)
-    const devices = [
-      { name: "Device B", lat: 37.7, lon: -122.4, status: "Idle" },
-      { name: "Device C", lat: 51.5, lon: -0.1, status: "Offline" }
-    ];
+      document.getElementById('cpuGpuInfo').textContent = `${navigator.hardwareConcurrency} cores`;
 
-    devices.forEach(device => {
-      L.circleMarker([device.lat, device.lon], {
-        radius: 8,
-        color: '#0f0',
-        fillColor: '#0f0',
-        fillOpacity: 0.8
-      }).addTo(map).bindPopup(`<b>${device.name}</b><br>Status: ${device.status}`);
+      if (navigator.deviceMemory) {
+        document.getElementById('memoryCapacity').textContent = `${navigator.deviceMemory} GB`;
+      } else {
+        document.getElementById('memoryCapacity').textContent = 'Unavailable';
+      }
+
+      if (navigator.storage && navigator.storage.estimate) {
+        navigator.storage.estimate().then((estimate) => {
+          document.getElementById('storageCapacity').textContent = `${(estimate.quota / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+        });
+      } else {
+        document.getElementById('storageCapacity').textContent = 'Unavailable';
+      }
+
+      // IP Address
+      fetch('https://api.ipify.org?format=json')
+        .then((response) => response.json())
+        .then((data) => {
+          document.getElementById('ipAddress').textContent = data.ip;
+          initializeMap(data.ip);
+        })
+        .catch(() => {
+          document.getElementById('ipAddress').textContent = 'Error fetching IP';
+          initializeMap();
+        });
+
+      function getOSInfo(userAgent) {
+        const os = {
+          Windows: /Windows NT/i,
+          MacOS: /Macintosh/i,
+          Linux: /Linux/i,
+          Android: /Android/i,
+          iOS: /iPhone|iPad/i,
+        };
+
+        for (let key in os) {
+          if (os[key].test(userAgent)) {
+            return key;
+          }
+        }
+        return 'Unknown';
+      }
+
+      // Uptime, Date, Time update tiap detik
+      let startTime = Date.now();
+      setInterval(() => {
+        let elapsed = Date.now() - startTime;
+        let seconds = Math.floor(elapsed / 1000) % 60;
+        let minutes = Math.floor(elapsed / (1000 * 60)) % 60;
+        let hours = Math.floor(elapsed / (1000 * 60 * 60));
+
+        let formattedUptime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        document.getElementById('uptimeValue').textContent = formattedUptime;
+
+        const now = new Date();
+        document.getElementById('dateValue').textContent = now.toLocaleDateString();
+        document.getElementById('timeValue').textContent = now.toLocaleTimeString();
+      }, 1000);
+
+      // Initialize map with geolocation or fallback IP location
+      function initializeMap(ip) {
+        const map = L.map('map').setView([0, 120], 3.5);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; CartoDB',
+          subdomains: 'abcd',
+          maxZoom: 19,
+        }).addTo(map);
+
+        const devices = [
+          { name: 'Device B', lat: 37.7, lon: -122.4, status: 'Idle' },
+          { name: 'Device C', lat: 51.5, lon: -0.1, status: 'Offline' },
+        ];
+
+        devices.forEach((device) => {
+          L.circleMarker([device.lat, device.lon], {
+            radius: 8,
+            color: '#0f0',
+            fillColor: '#0f0',
+            fillOpacity: 0.8,
+          })
+            .addTo(map)
+            .bindPopup(`<b>${device.name}</b><br>Status: ${device.status}`);
+        });
+
+        // Coba pakai Geolocation API dulu
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const lat = position.coords.latitude;
+              const lon = position.coords.longitude;
+
+              L.circleMarker([lat, lon], {
+                radius: 10,
+                color: '#00ffcc',
+                fillColor: '#00ffcc',
+                fillOpacity: 0.9,
+              })
+                .addTo(map)
+                .bindPopup('<b>Your Device (Device A)</b><br>Status: Online')
+                .openPopup();
+
+              map.setView([lat, lon], 5);
+            },
+            () => {
+              // Jika user tolak atau error, fallback ke lokasi IP
+              if (ip) {
+                fetch(`https://ipapi.co/${ip}/json/`)
+                  .then((res) => res.json())
+                  .then((data) => {
+                    if (data.latitude && data.longitude) {
+                      L.circleMarker([data.latitude, data.longitude], {
+                        radius: 10,
+                        color: '#00ffcc',
+                        fillColor: '#00ffcc',
+                        fillOpacity: 0.9,
+                      })
+                        .addTo(map)
+                        .bindPopup('<b>Your Device (Device A) - IP Based</b><br>Status: Online')
+                        .openPopup();
+
+                      map.setView([data.latitude, data.longitude], 5);
+                    }
+                  })
+                  .catch(() => {
+                    console.warn('Failed to get location from IP fallback.');
+                  });
+              } else {
+                console.warn('No IP to fallback.');
+              }
+            }
+          );
+        } else {
+          // Jika browser tidak support geolocation, langsung fallback ke IP
+          if (ip) {
+            fetch(`https://ipapi.co/${ip}/json/`)
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.latitude && data.longitude) {
+                  L.circleMarker([data.latitude, data.longitude], {
+                    radius: 10,
+                    color: '#00ffcc',
+                    fillColor: '#00ffcc',
+                    fillOpacity: 0.9,
+                  })
+                    .addTo(map)
+                    .bindPopup('<b>Your Device (Device A) - IP Based</b><br>Status: Online')
+                    .openPopup();
+
+                  map.setView([data.latitude, data.longitude], 5);
+                }
+              })
+              .catch(() => {
+                console.warn('Failed to get location from IP fallback.');
+              });
+          } else {
+            console.warn('No IP to fallback.');
+          }
+        }
+      }
     });
-
-    // Deteksi lokasi pengguna
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(function(position) {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-
-        L.circleMarker([lat, lon], {
-          radius: 10,
-          color: '#00ffcc',
-          fillColor: '#00ffcc',
-          fillOpacity: 0.9
-        }).addTo(map).bindPopup("<b>Your Device (Device A)</b><br>Status: Online").openPopup();
-
-        map.setView([lat, lon], 5);
-      }, function() {
-        console.warn("User denied Geolocation.");
-      });
-    } else {
-      console.warn("Geolocation not supported.");
-    }
   </script>
 </body>
-</html>
+    </html>
