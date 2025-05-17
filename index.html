@@ -68,6 +68,7 @@
       </div>
 
       <br>
+      <br>
       <h2 style="color: #00ff00;">Device Location Map</h2>
       <div id="map" style="height: 400px; border-radius: 10px; margin-top: 20px;"></div>
       <br>
@@ -81,18 +82,20 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://kit.fontawesome.com/a076d05399.js"></script>
   <script>
+    // Inisialisasi peta awal
     const map = L.map('map').setView([0, 120], 3.5);
 
+    // Tambahkan tile layer dark
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; CartoDB',
       subdomains: 'abcd',
       maxZoom: 19
     }).addTo(map);
 
+    // Tambahkan titik perangkat lain (statis)
     const devices = [
-      { name: "Device A", lat: -6.2, lon: 106.8 },
-      { name: "Device B", lat: 37.7, lon: -122.4 },
-      { name: "Device C", lat: 51.5, lon: -0.1 }
+      { name: "Device B", lat: 37.7, lon: -122.4, status: "Idle" },
+      { name: "Device C", lat: 51.5, lon: -0.1, status: "Offline" }
     ];
 
     devices.forEach(device => {
@@ -101,8 +104,29 @@
         color: '#0f0',
         fillColor: '#0f0',
         fillOpacity: 0.8
-      }).addTo(map).bindPopup(`<b>${device.name}</b><br>Status: Online`);
+      }).addTo(map).bindPopup(`<b>${device.name}</b><br>Status: ${device.status}`);
     });
+
+    // Deteksi lokasi pengguna
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        L.circleMarker([lat, lon], {
+          radius: 10,
+          color: '#00ffcc',
+          fillColor: '#00ffcc',
+          fillOpacity: 0.9
+        }).addTo(map).bindPopup("<b>Your Device (Device A)</b><br>Status: Online").openPopup();
+
+        map.setView([lat, lon], 5);
+      }, function() {
+        console.warn("User denied Geolocation.");
+      });
+    } else {
+      console.warn("Geolocation not supported.");
+    }
   </script>
 </body>
 </html>
